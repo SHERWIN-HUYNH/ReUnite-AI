@@ -1,0 +1,94 @@
+# ============================================================
+#  ReUnite AI — Root .gitignore
+#  Client: Next.js (TypeScript, Tailwind, pnpm)
+#  Server: Python / FastAPI
+# ============================================================
+
+# ────────────────────────────────────────────────────────────
+# Python — server/
+# ────────────────────────────────────────────────────────────
+
+# Virtual environments
+server/reunite_ai/
+server/.venv/
+server/venv/
+server/env/
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+**/.Python
+
+# Distribution / packaging
+server/dist/
+server/build/
+server/*.egg-info/
+server/.eggs/
+
+# Unit test / coverage
+server/.pytest_cache/
+server/.coverage
+server/htmlcov/
+server/.mypy_cache/
+
+# ────────────────────────────────────────────────────────────
+# Next.js — client/
+# ────────────────────────────────────────────────────────────
+
+# Build output
+client/.next/
+client/out/
+client/dist/
+client/build/
+
+# Dependencies
+client/node_modules/
+
+# Misc Next.js
+client/.vercel
+client/nul
+
+# ────────────────────────────────────────────────────────────
+# Environment / secrets — NEVER commit these
+# ────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+client/.env
+client/.env.*
+!client/.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# ────────────────────────────────────────────────────────────
+# OS / Editor artefacts
+# ────────────────────────────────────────────────────────────
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# ────────────────────────────────────────────────────────────
+# Misc project files not needed in the repo
+# ────────────────────────────────────────────────────────────
+test.txt
+pdf_output.txt
+*.log
+*.tmp
+*.bak
