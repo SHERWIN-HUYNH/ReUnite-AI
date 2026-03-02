@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import test
+# from app.api.routes import test     # Week 1 - CLIP search (needs cloudinary/qdrant)
+# from app.api.routes import search   # Week 1 - CLIP search (needs cloudinary/qdrant)
+from app.api.routes import auth
 
 app = FastAPI(
     title="ReUnite AI API",
@@ -18,7 +20,9 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(test.router)
+# app.include_router(test.router)    # Week 1 - enable after cloudinary is set up
+# app.include_router(search.router)  # Week 1 - enable after cloudinary is set up
+app.include_router(auth.router)
 
 @app.get("/")
 async def root():

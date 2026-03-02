@@ -34,15 +34,15 @@ export const RegisterForm = () => {
         toast.error('Vui lòng nhập mật khẩu')
         return
       }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_FLASK_API_URL}/auth/signup`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          username: values.username,
           email: values.email,
           password: currentPassword,
-          name: values.username,
           phone: values.phone,
         }),
       })
@@ -52,11 +52,11 @@ export const RegisterForm = () => {
         toast.error(responseData.error || 'Đăng ký thất bại')
         throw new Error(responseData.error)
       }
-      
-      toast.success('Đăng ký thành công! 🎉')
+
+      toast.success('Đăng ký thành công! 🎉', { duration: 1500 })
       setTimeout(() => {
         router.push('/login')
-      }, 500)
+      }, 1500)
     } catch (error) {
       if (error instanceof Error) {
         console.error('Registration error:', error)
