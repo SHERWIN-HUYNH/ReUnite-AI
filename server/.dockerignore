@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+reunite_ai/
+.venv/
+venv/
+env/
+
+# Tests & coverage
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment secrets
+.env
+.env.*
+
+# Misc
+*.log
+*.tmp
+README.md

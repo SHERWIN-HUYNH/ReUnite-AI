@@ -1,0 +1,52 @@
+services:
+  # ── Qdrant Vector Database ─────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: reunite_qdrant
+    ports:
+      - "6333:6333" # REST API & Dashboard
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  # ── FastAPI Server ─────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: reunite_server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app # hot-reload: changes reflect without rebuild
+    env_file:
+      - ./server/.env # put secrets here (NEVER commit this file)
+    environment:
+      - QDRANT_HOST=qdrant # use service name, not localhost
+      - QDRANT_PORT=6333
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+  # ── Next.js Client ─────────────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: reunite_client
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app # hot-reload for development
+      - /app/node_modules # keep container's node_modules
+      - /app/.next # keep container's build cache
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - server
+    restart: unless-stopped
+
+# ── Named volumes ──────────────────────────────────────────────────────
+volumes:
+  qdrant_data:

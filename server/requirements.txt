@@ -1,6 +1,27 @@
+# ── Web Framework ──────────────────────────────────────────────────────
 fastapi==0.104.1
-fastapi-cli==0.0.4
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-multipart==0.0.6
+
+# ── Environment ────────────────────────────────────────────────────────
+python-dotenv==1.0.0
+
+# ── Vector Database (Week 1) ───────────────────────────────────────────
+qdrant-client==1.7.0
+
+# ── CLIP / ML (Week 1) ─────────────────────────────────────────────────
+torch==2.2.0
+transformers==4.36.0
+Pillow==10.1.0
+numpy==1.26.2
+
+# ── Image Storage (Week 1) ─────────────────────────────────────────────
+cloudinary==1.36.0
+
+# ── Database & Auth (Week 2) ───────────────────────────────────────────
+motor==3.7.1
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-jose[cryptography]==3.3.0
