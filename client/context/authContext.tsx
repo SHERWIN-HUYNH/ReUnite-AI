@@ -21,11 +21,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/me', { 
+        const token = localStorage.getItem('access_token')
+        if (!token) {
+          setLoading(false)
+          return
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, { 
           cache: 'no-store',
-          credentials: 'include' })
-        const data = await res.json()
-        if (data.loggedIn) setUser(data.user)
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          // Map server response to client user format
+          const mappedUser = {
+            account_id: data.id,
+            name: data.username,
+            email: data.email,
+            role: data.role,
+            phone: data.phone,
+          }
+          setUser(mappedUser)
+        } else {
+          // Token invalid, clear it
+          localStorage.removeItem('access_token')
+        }
+      } catch (error) {
+        console.error('Error loading user:', error)
+        localStorage.removeItem('access_token')
       } finally {
         setLoading(false)
       }

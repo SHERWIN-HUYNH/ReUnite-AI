@@ -3,209 +3,102 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { MissingPost } from '@/types/interface'
 
+// Response shape từ FastAPI GET /posts/
 interface ApiPost {
-  _id: string;
-  name: string;
-  description?: string;
-  update_at?: string;
-  create_at: string;
-  gender: string;
-  dob?: string;
-  relationship?: string;
-  address?: string;
-  contact_infor?: string;
-  images?: string[];
+  id: string
+  account_id: string
+  name: string
+  gender: string
+  dob?: string | null
+  missing_since?: string | null
+  description?: string | null
+  relationship?: string | null
+  address?: string | null
+  contact_info: string
+  status: string
+  image_urls: string[]
+  created_at: string
+  updated_at: string
 }
 
-const mapApiPostToMissingPost = (post: ApiPost): MissingPost => ({
-  id_: post._id,
+// Map API response → MissingPost (format dùng bởi ListPeople & PersonCard)
+const mapApiPost = (post: ApiPost): MissingPost => ({
+  id_: post.id,
   name: post.name,
-  description: post.description || "",
-  missing_since: post.update_at || post.create_at,
   gender: post.gender,
-  dob: post.dob,
-  relationship: post.relationship || "",
-  address: post.address || "",
-  contact_infor: post.contact_infor || "",
-  images: (post.images || []).map((img) => 
-    typeof img === 'string' 
-      ? { _id: '', created_at: '', is_avatar: false, url: img }
-      : img
-  ),
-});
+  dob: post.dob ?? undefined,
+  missing_since: post.missing_since ?? post.created_at,
+  description: post.description ?? '',
+  relationship: post.relationship ?? '',
+  address: post.address ?? '',
+  contact_infor: post.contact_info,
+  images: post.image_urls.map((url, i) => ({
+    _id: `${post.id}_${i}`,
+    created_at: post.created_at,
+    is_avatar: i === 0,
+    url,
+  })),
+})
 
 interface UsePostsReturn {
-  posts: MissingPost[];
-  isLoading: boolean;
-  error: string | null;
-  refetch: () => void;
+  posts: MissingPost[]
+  total: number
+  isLoading: boolean
+  error: string | null
+  page: number
+  totalPages: number
+  setPage: (p: number) => void
+  refetch: () => void
 }
 
-// ============================================
-// MOCK DATA FOR UI DEVELOPMENT
-// ============================================
-const MOCK_POSTS: MissingPost[] = [
-  {
-    id_: '1',
-    name: 'Sarah Johnson',
-    description: 'Last seen wearing a red t-shirt and blue jeans. She has brown hair, blue eyes, and a small mole on her right cheek.',
-    missing_since: '2024-06-15',
-    gender: 'Female',
-    dob: '2007-03-20',
-    relationship: 'Daughter',
-    address: 'Seattle, WA',
-    contact_infor: '(206) 555-0123',
-    images: [
-      { _id: '1', created_at: '2024-06-15', is_avatar: true, url: 'https://i.pravatar.cc/300?img=1' }
-    ],
-  },
-  {
-    id_: '2',
-    name: 'Michael Chen',
-    description: 'Last seen at Lincoln Park wearing a black hoodie. He wears glasses and has a distinctive scar on his left hand.',
-    missing_since: '2024-05-20',
-    gender: 'Male',
-    dob: '2005-08-15',
-    relationship: 'Son',
-    address: 'Portland, OR',
-    contact_infor: '(503) 555-0456',
-    images: [
-      { _id: '2', created_at: '2024-05-20', is_avatar: true, url: 'https://i.pravatar.cc/300?img=12' }
-    ],
-  },
-  {
-    id_: '3',
-    name: 'Emma Rodriguez',
-    description: 'Last seen near downtown shopping area wearing a purple jacket and white sneakers. Long black hair in a ponytail.',
-    missing_since: '2024-07-01',
-    gender: 'Female',
-    dob: '2010-11-03',
-    relationship: 'Daughter',
-    address: 'San Francisco, CA',
-    contact_infor: '(415) 555-0789',
-    images: [
-      { _id: '3', created_at: '2024-07-01', is_avatar: true, url: 'https://i.pravatar.cc/300?img=5' }
-    ],
-  },
-  {
-    id_: '4',
-    name: 'David Martinez',
-    description: 'Last seen leaving school. Wearing blue school uniform, black backpack. Has short brown hair and brown eyes.',
-    missing_since: '2024-04-10',
-    gender: 'Male',
-    dob: '2008-01-25',
-    relationship: 'Son',
-    address: 'Los Angeles, CA',
-    contact_infor: '(213) 555-0234',
-    images: [
-      { _id: '4', created_at: '2024-04-10', is_avatar: true, url: 'https://i.pravatar.cc/300?img=15' }
-    ],
-  },
-  {
-    id_: '5',
-    name: 'Ashley Williams',
-    description: 'Last seen at local mall with friends. Blonde hair, green eyes, wearing pink sweater and jeans.',
-    missing_since: '2024-08-15',
-    gender: 'Female',
-    dob: '2006-12-08',
-    relationship: 'Daughter',
-    address: 'Denver, CO',
-    contact_infor: '(303) 555-0567',
-    images: [
-      { _id: '5', created_at: '2024-08-15', is_avatar: true, url: 'https://i.pravatar.cc/300?img=9' }
-    ],
-  },
-  {
-    id_: '6',
-    name: 'James Taylor',
-    description: 'Last seen near Central Station. Wearing grey jacket, blue jeans. Has tattoo on right arm.',
-    missing_since: '2024-03-05',
-    gender: 'Male',
-    dob: '2000-07-19',
-    relationship: 'Brother',
-    address: 'Chicago, IL',
-    contact_infor: '(312) 555-0890',
-    images: [
-      { _id: '6', created_at: '2024-03-05', is_avatar: true, url: 'https://i.pravatar.cc/300?img=33' }
-    ],
-  },
-];
+const LIMIT = 6
 
 export const usePosts = (): UsePostsReturn => {
-  const [posts, setPosts] = useState<MissingPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [posts, setPosts] = useState<MissingPost[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
-  // ============================================
-  // COMMENTED OUT - API CALL (Uncomment when server is ready)
-  // ============================================
-  // const fetchPosts = useCallback(async (signal?: AbortSignal) => {
-  //   try {
-  //     setIsLoading(true);
-  //     setError(null);
-  //     
-  //     const response = await fetch(
-  //       `${process.env.NEXT_PUBLIC_FLASK_API_URL}/posts`,
-  //       { signal }
-  //     );
-  //     
-  //     if (!response.ok) {
-  //       throw new Error('Failed to fetch posts');
-  //     }
-  //     
-  //     const data = await response.json();
-  //     const mappedPosts = data.posts.map(mapApiPostToMissingPost);
-  //     setPosts(mappedPosts);
-  //   } catch (err) {
-  //     if (err instanceof Error) {
-  //       if (err.name === 'AbortError') {
-  //         console.log('Fetch aborted');
-  //         return;
-  //       }
-  //       setError(err.message);
-  //       toast.error('Failed to fetch posts');
-  //     }
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // }, []);
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
-  // ============================================
-  // MOCK: Simulate API loading with delay
-  // ============================================
+  const fetchPosts = useCallback(async (pageNum: number, signal?: AbortSignal) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const skip = (pageNum - 1) * LIMIT
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/posts/?skip=${skip}&limit=${LIMIT}`,
+        { signal }
+      )
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`)
+
+      const data = await res.json()
+      const mapped = (data.posts as ApiPost[]).map(mapApiPost)
+      setPosts(mapped)
+      setTotal(data.total ?? mapped.length)
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') return
+        setError(err.message)
+        toast.error('Không thể tải danh sách bài đăng')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPosts(MOCK_POSTS);
-      setIsLoading(false);
-    }, 800); // Simulate network delay
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // ============================================
-  // COMMENTED OUT - Original useEffect with API call
-  // ============================================
-  // useEffect(() => {
-  //   const abortController = new AbortController();
-  //   fetchPosts(abortController.signal);
-
-  //   return () => {
-  //     abortController.abort();
-  //   };
-  // }, [fetchPosts]);
+    const controller = new AbortController()
+    fetchPosts(page, controller.signal)
+    return () => controller.abort()
+  }, [fetchPosts, page])
 
   const refetch = useCallback(() => {
-    // MOCK: Refetch with mock data
-    setIsLoading(true);
-    setTimeout(() => {
-      setPosts(MOCK_POSTS);
-      setIsLoading(false);
-      toast.success('Data refreshed');
-    }, 500);
-    
-    // Uncomment when API is ready:
-    // fetchPosts();
-  }, []);
+    fetchPosts(page)
+  }, [fetchPosts, page])
 
-  return { posts, isLoading, error, refetch };
-};
+  return { posts, total, isLoading, error, page, totalPages, setPage, refetch }
+}

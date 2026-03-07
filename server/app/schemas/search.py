@@ -33,6 +33,6 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     """Response wrapping a list of search results."""
-    query: str
+    query: Optional[str] = None   # None for image-based searches
     results: List[SearchResult]
     total: int

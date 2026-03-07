@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from app.api.routes import test     # Week 1 - CLIP search (needs cloudinary/qdrant)
-# from app.api.routes import search   # Week 1 - CLIP search (needs cloudinary/qdrant)
+from app.api.routes import search
 from app.api.routes import auth
+from app.api.routes import posts
 
 app = FastAPI(
     title="ReUnite AI API",
@@ -13,7 +14,7 @@ app = FastAPI(
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js client
+    allow_origins=["http://localhost:3000","http://localhost:3001"],  # Next.js client
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,8 +22,9 @@ app.add_middleware(
 
 # Include routers
 # app.include_router(test.router)    # Week 1 - enable after cloudinary is set up
-# app.include_router(search.router)  # Week 1 - enable after cloudinary is set up
+app.include_router(search.router)
 app.include_router(auth.router)
+app.include_router(posts.router)
 
 @app.get("/")
 async def root():

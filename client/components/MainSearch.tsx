@@ -29,22 +29,22 @@ interface FormState {
 }
 
 // Helper function
-const hasNoFilters = (form: FormState): boolean => 
-  !form.description && 
-  form.ageGroup === 'All Ages' && 
-  form.gender === 'Any Gender' && 
+const hasNoFilters = (form: FormState): boolean =>
+  !form.description &&
+  form.ageGroup === 'All Ages' &&
+  form.gender === 'Any Gender' &&
   form.timeMissing === 'Any Time';
 
 export const MainSearch = () => {
   // Use custom hooks
-  const { posts, isLoading: isLoadingPosts } = usePosts();
+  const { posts, isLoading: isLoadingPosts, page, totalPages, setPage } = usePosts();
   const { searchByImage, isSearching } = useImageSearch();
-  
+
   // Local state
-  const [currentPage, setCurrentPage] = useState(1);
   const [filteredPosts, setFilteredPosts] = useState<MissingPost[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isFiltered, setIsFiltered] = useState(false);
   const [formState, setFormState] = useState<FormState>({
     description: '',
     ageGroup: 'All Ages',
@@ -54,10 +54,12 @@ export const MainSearch = () => {
 
   const isLoading = isLoadingPosts || isSearching;
 
-  // Update filtered posts when posts change
+  // Khi posts từ API thay đổi và chưa lọc → dùng thẳng
   useEffect(() => {
-    setFilteredPosts(posts);
-  }, [posts]);
+    if (!isFiltered) setFilteredPosts(posts);
+  }, [posts, isFiltered]);
+
+
 
   useEffect(() => {
     if (!uploadedFile) {
@@ -70,15 +72,14 @@ export const MainSearch = () => {
     return () => URL.revokeObjectURL(url);
   }, [uploadedFile]);
 
-  // Memoize pagination calculations
-  const { totalPages, displayedPosts } = useMemo(() => {
-    const total = Math.ceil(filteredPosts.length / ITEMS_PER_PAGE);
-    const displayed = filteredPosts.slice(
-      (currentPage - 1) * ITEMS_PER_PAGE,
-      currentPage * ITEMS_PER_PAGE
-    );
-    return { totalPages: total, displayedPosts: displayed };
-  }, [filteredPosts, currentPage]);
+  // Phân trang: nếu đã filter client-side, tự tính; ngược lại dùng server pagination
+  const displayedPosts = isFiltered
+    ? filteredPosts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+    : filteredPosts;
+  const activeTotalPages = isFiltered
+    ? Math.max(1, Math.ceil(filteredPosts.length / ITEMS_PER_PAGE))
+    : totalPages;
+
 
   // Create debounced filter function with proper cleanup
   const debouncedFilterPosts = useMemo(
@@ -116,7 +117,8 @@ export const MainSearch = () => {
       });
 
       setFilteredPosts(filtered);
-      setCurrentPage(1);
+      setPage(1);
+
     }, 300),
     []
   );
@@ -131,17 +133,23 @@ export const MainSearch = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let postsToFilter = posts;
-
     if (uploadedFile) {
-      postsToFilter = await searchByImage(uploadedFile);
-    } else if (hasNoFilters(formState)) {
+      const results = await searchByImage(uploadedFile);
+      setFilteredPosts(results);
+      setIsFiltered(true);
+      setPage(1);
+      return;
+    }
+
+    if (hasNoFilters(formState)) {
       toast.error('Please provide at least one search criterion or upload an image.');
       return;
     }
 
-    debouncedFilterPosts(postsToFilter, formState);
+    debouncedFilterPosts(posts, formState);
+    setIsFiltered(true);
   };
+
 
   // Memoized event handlers
   const clearImage = useCallback(() => {
@@ -196,7 +204,7 @@ export const MainSearch = () => {
                     Search by Photo
                   </label>
                   <div className="flex-1">
-                    <ImageUpload 
+                    <ImageUpload
                       previewUrl={previewUrl}
                       onFileChange={handleFileChange}
                       onClear={clearImage}
@@ -233,7 +241,7 @@ export const MainSearch = () => {
 
                   {/* Additional Filters */}
                   <div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <FilterSelect
                         name="ageGroup"
@@ -302,12 +310,12 @@ export const MainSearch = () => {
           ) : (
             <>
               <ListPeople ListPosts={displayedPosts} />
-              {totalPages > 1 && (
+              {activeTotalPages > 1 && (
                 <div className="flex justify-center mt-8">
                   <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+                    currentPage={page}
+                    totalPages={activeTotalPages}
+                    onPageChange={(p) => { setPage(p); if (!isFiltered) window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   />
                 </div>
               )}
