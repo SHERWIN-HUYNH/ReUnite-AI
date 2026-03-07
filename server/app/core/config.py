@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # ── Qdrant ─────────────────────────────────────────────────────────
-    qdrant_host: str = "qdrant"
+    qdrant_host: str = ""
     qdrant_port: int = 6333
     qdrant_collection: str = "missing_persons"
 
@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # ── CLIP Model ─────────────────────────────────────────────────────
     clip_model_name: str = "openai/clip-vit-base-patch32"
     clip_embedding_dim: int = 512
+
+    # ── JWT ────────────────────────────────────────────────────────────
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24  # 1 day
 
     # ── MongoDB ────────────────────────────────────────────────────────
     mongodb_url: str = ""

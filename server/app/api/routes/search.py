@@ -1,7 +1,8 @@
 import uuid
 import logging
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from typing import Optional
+from typing import Optional, List
+from qdrant_client.models import ScoredPoint
 from app.schemas.search import IndexRequest, SearchRequest, SearchResponse, SearchResult
 from app.services.clip_service import clip_service
 from app.services.qdrant_service import qdrant_service
@@ -87,7 +88,7 @@ async def semantic_search(request: SearchRequest):
         query_vector = clip_service.encode_text(request.query)
 
         # 2. Search Qdrant for top-K similar vectors
-        hits = qdrant_service.search_vectors(
+        hits: List[ScoredPoint] = qdrant_service.search_vectors(
             vector=query_vector,
             top_k=request.top_k,
         )
@@ -128,3 +129,49 @@ async def search_health():
         "clip": "loaded",
         "status": "ok" if qdrant_ok else "degraded",
     }
+
+
+@router.post("/image", response_model=SearchResponse, summary="Search by uploading an image")
+async def image_search(
+    file: UploadFile = File(..., description="Photo to search with"),
+    top_k: int = Form(5, ge=1, le=20, description="Number of results to return"),
+):
+    """
+    Search for missing persons by uploading a photo.
+    - CLIP encodes the uploaded image into a vector
+    - Qdrant finds the most visually similar persons in the database
+    - Returns top-K matches with similarity scores
+    """
+    try:
+        image_bytes = await file.read()
+
+        # 1. Encode the uploaded image with CLIP
+        query_vector = clip_service.encode_image(image_bytes)
+
+        # 2. Search Qdrant for visually similar vectors
+        hits: List[ScoredPoint] = qdrant_service.search_vectors(
+            vector=query_vector,
+            top_k=top_k,
+        )
+
+        # 3. Map results to response schema
+        results = [
+            SearchResult(
+                id=str(hit.id),
+                score=round(hit.score, 4),
+                name=hit.payload.get("name", "Unknown"),
+                age=hit.payload.get("age"),
+                gender=hit.payload.get("gender"),
+                location=hit.payload.get("location"),
+                description=hit.payload.get("description"),
+                contact_info=hit.payload.get("contact_info"),
+                image_url=hit.payload.get("image_url"),
+            )
+            for hit in hits
+        ]
+
+        return SearchResponse(results=results, total=len(results))
+
+    except Exception as e:
+        logger.error(f"Image search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

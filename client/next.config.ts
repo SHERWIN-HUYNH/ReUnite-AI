@@ -6,8 +6,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
-        port: '',
-        pathname: '/**',
+      },
+      {
+        // Cloudinary — lưu ảnh người mất tích
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
     ],
   },

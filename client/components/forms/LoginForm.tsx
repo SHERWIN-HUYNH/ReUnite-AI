@@ -1,11 +1,11 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { Form } from '@/components/ui/form'
-import {LoginSchema } from '@/validation/login'
+import { LoginSchema } from '@/validation/login'
 import 'react-phone-number-input/style.css'
 import CustomFormField, { FormFieldType } from '../CustomFormField'
 import SubmitButton from '../SubmitButton'
@@ -19,57 +19,68 @@ import { Mail, Lock } from 'lucide-react'
 export const LoginForm = () => {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState('')
-  const {user,setUser} = useAuth()
+  const { setUser } = useAuth()
+
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
     defaultValues: {
-      email: ''
+      email: '',
+      password: '',
     },
   })
-  useEffect(() => {
-  console.log('Form Errors:', form.formState.errors)
-}, [form.formState.errors])
-  
+
   const onSubmit = async (values: z.infer<typeof LoginSchema>) => {
-    console.log(form.formState.errors)
-    console.log('IS LOADING', isLoading)
     setIsLoading(true)
     try {
-      if (!currentPassword) {
-        toast.error('Vui lòng nhập mật khẩu')
-        return
-      }
-      const res = await fetch(`api/auth/login`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/login`
+
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           email: values.email,
-          password: currentPassword,
+          password: values.password,
         }),
       })
+
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        toast.error('Server không phản hồi đúng định dạng. Vui lòng kiểm tra server.')
+        throw new Error('Server returned non-JSON response')
+      }
+
       const responseData = await res.json()
       if (!res.ok) {
-        toast.error(responseData.error || 'Đăng nhập thất bại')
-        throw new Error(responseData.error)
+        toast.error(responseData.detail || 'Đăng nhập thất bại')
+        throw new Error(responseData.detail)
       }
-      setUser(responseData.user)
-      toast.success('Đăng nhập thành công! 🎉')
-      console.log('LOGIN',user?.role)
-      
-      // Redirect based on role
-      setTimeout(() => {
-        if(responseData.user?.role === 'admin'){
-          router.push('/admin')
-        } else{
-          router.push('/')
-        }
-      }, 500)
 
-    } catch (error: any) {
+      // Lưu access token vào localStorage
+      if (responseData.access_token) {
+        localStorage.setItem('access_token', responseData.access_token)
+      }
+
+      // Map server user response sang định dạng client
+      const mappedUser = {
+        account_id: responseData.user.id,
+        name: responseData.user.username,
+        email: responseData.user.email,
+        role: responseData.user.role,
+        phone: responseData.user.phone,
+      }
+
+      setUser(mappedUser)
+      toast.success('Đăng nhập thành công! 🎉')
+
+      // Redirect theo role — dùng replace để không để lại /login trong history
+      const target = mappedUser.role === 'admin' ? '/admin' : '/'
+      setTimeout(() => {
+        router.replace(target)
+        router.refresh()
+      }, 500)
+    } catch (error: unknown) {
       console.error('Login error:', error)
     } finally {
       setIsLoading(false)
@@ -100,18 +111,30 @@ export const LoginForm = () => {
 
         {/* Password Field */}
         <div className="space-y-2">
-          <Label htmlFor="current_password" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-md">
               <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             </div>
             Mật khẩu
           </Label>
-          <PasswordInput
-            id="current_password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            autoComplete="current-password"
-            placeholder="Nhập mật khẩu của bạn"
+          <Controller
+            control={form.control}
+            name="password"
+            render={({ field, fieldState }) => (
+              <div>
+                <PasswordInput
+                  id="password"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  autoComplete="current-password"
+                  placeholder="Nhập mật khẩu của bạn"
+                />
+                {fieldState.error && (
+                  <p className="text-sm text-red-500 mt-1">{fieldState.error.message}</p>
+                )}
+              </div>
+            )}
           />
         </div>
 

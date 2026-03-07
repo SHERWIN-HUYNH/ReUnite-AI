@@ -25,12 +25,12 @@ interface MissingPersonFormData {
 
 const MissingPersonForm: NextPage = () => {
   const router = useRouter();
-  const {user, loading} = useAuth()
+  const { user, loading } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [loadingState, setLoadingState] = useState(false);
   const [formData, setFormData] = useState<MissingPersonFormData>({
-    account_id:  '',
+    account_id: '',
     name: 'PERSON',
     gender: '',
     missing_since: '',
@@ -39,7 +39,7 @@ const MissingPersonForm: NextPage = () => {
     address: 'NEW YORK',
     contact_info: '09249234',
     status: 'finding',
-    images:[]
+    images: []
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -65,88 +65,98 @@ const MissingPersonForm: NextPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-    
+
     if (formData.missing_since) {
-    const missingDate = new Date(formData.missing_since);
-    if (formData.dob) {
-      const dobDate = new Date(formData.dob);
-      if (isNaN(dobDate.getTime()) || isNaN(missingDate.getTime())) {
-      toast.error(INVALID_MISSING_SINCE);
-      return;
+      const missingDate = new Date(formData.missing_since);
+      if (formData.dob) {
+        const dobDate = new Date(formData.dob);
+        if (isNaN(dobDate.getTime()) || isNaN(missingDate.getTime())) {
+          toast.error(INVALID_MISSING_SINCE);
+          return;
+        }
+        if (missingDate <= dobDate) {
+          toast.error(INVALID_MISSING_SINCE);
+          return;
+        }
       }
-      if (missingDate <= dobDate) {
-        toast.error(INVALID_MISSING_SINCE);
-      return;
     }
-    }
-    
-    }
+
+    setLoadingState(true);
     try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        toast.error(LOGIN_REQUIRE);
+        router.push('/login');
+        return;
+      }
+
       const payload = new FormData();
       payload.append('name', formData.name);
       payload.append('gender', formData.gender);
+      payload.append('contact_info', formData.contact_info);
+      payload.append('status', formData.status);
       if (formData.dob) payload.append('dob', formData.dob);
       if (formData.missing_since) payload.append('missing_since', formData.missing_since);
       if (formData.description) payload.append('description', formData.description);
-      payload.append('relationship', formData.relationship);
+      if (formData.relationship) payload.append('relationship', formData.relationship);
       if (formData.address) payload.append('address', formData.address);
-      payload.append('contact_info', formData.contact_info);
-      payload.append('status', formData.status);
-
 
       formData.images.forEach((img) => {
         payload.append('images', img);
       });
-      
-      console.log('RUN 4',formData)
-      const res = await fetch('/api/posts', {
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/posts`, {
         method: 'POST',
-        body: payload, 
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: payload,
       });
 
       const responseData = await res.json();
 
-    if (!res.ok) {
-      throw new Error(responseData.error || 'Upload failed');
-    }
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Tạo bài đăng thất bại');
+      }
 
-    toast.success(CREATED_POST);
-    router.push('/')
+      toast.success(CREATED_POST);
+      router.push('/');
     } catch (error) {
       if (error instanceof Error) {
-          toast.error(error.message)
+        toast.error(error.message);
       }
+    } finally {
+      setLoadingState(false);
     }
   };
 
-const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-  if (!e.target.files) return;
-  const files = Array.from(e.target.files);  // File[]
-  console.log('FILES', files) 
-  setFormData(prev => ({
-    ...prev,
-    images: [...prev.images, ...files],
-  }));
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);  // File[]
+    console.log('FILES', files)
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...files],
+    }));
 
-  const newPreviews = files.map(f => URL.createObjectURL(f));
-  setPreviewImages(prev => [...prev, ...newPreviews]);
-};
+    const newPreviews = files.map(f => URL.createObjectURL(f));
+    setPreviewImages(prev => [...prev, ...newPreviews]);
+  };
 
 
-const removeImage = (index: number) => {
-  setFormData(prev => {
-    const imgs = [...prev.images];
-    imgs.splice(index, 1);
-    return { ...prev, images: imgs };
-  });
+  const removeImage = (index: number) => {
+    setFormData(prev => {
+      const imgs = [...prev.images];
+      imgs.splice(index, 1);
+      return { ...prev, images: imgs };
+    });
 
-  setPreviewImages(prev => {
-    const pr = [...prev];
-    pr.splice(index, 1);
-    return pr;
-  });
-};
+    setPreviewImages(prev => {
+      const pr = [...prev];
+      pr.splice(index, 1);
+      return pr;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8 relative">
@@ -156,7 +166,7 @@ const removeImage = (index: number) => {
       >
         <ArrowBigLeft />
         <Link href={'/'} className="font-medium">Back to Home</Link>
-        
+
       </button>
 
       {/* Hero Section */}
@@ -224,7 +234,7 @@ const removeImage = (index: number) => {
                 <input
                   type="date"
                   name="dob"
-                  value={formData.dob}
+                  value={formData.dob ?? ''}
                   onChange={handleChange}
                   max={getCurrentDate()}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
@@ -238,7 +248,7 @@ const removeImage = (index: number) => {
               <input
                 type="date"
                 name="missing_since"
-                value={formData.missing_since}
+                value={formData.missing_since ?? ''}
                 onChange={handleChange}
                 max={getCurrentDate()}
                 required
@@ -310,7 +320,7 @@ const removeImage = (index: number) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Upload Photos (Multiple allowed)
             </label>
-            
+
             {/* Hidden file input */}
             <input
               type="file"
@@ -320,9 +330,9 @@ const removeImage = (index: number) => {
               accept="image/*"
               className="hidden"
             />
-            
+
             {/* Custom upload area */}
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors"
             >
@@ -336,34 +346,34 @@ const removeImage = (index: number) => {
             </div>
           </div>
           {/* Image Previews */}
-            {previewImages.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({previewImages.length})</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {previewImages.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`Upload preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-md border border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeImage(index);
-                        }}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+          {previewImages.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({previewImages.length})</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {previewImages.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Upload preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-md border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeImage(index);
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
           {/* Submit Buttons */}
           <div className="flex justify-end gap-4 pt-8">
             <button
@@ -407,7 +417,7 @@ const removeImage = (index: number) => {
 
       </div>
     </div>
-    
+
   );
 };
 

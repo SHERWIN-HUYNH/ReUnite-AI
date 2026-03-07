@@ -9,12 +9,12 @@ interface ListPeopleProps {
 // Helper function to calculate age consistently
 const calculateAge = (dob: string | null | undefined): number => {
   if (!dob) return 0;
-  
+
   const dobDate = new Date(dob);
   const today = new Date();
   const age = today.getFullYear() - dobDate.getFullYear();
   const monthDiff = today.getMonth() - dobDate.getMonth();
-  
+
   // Adjust if birthday hasn't occurred this year
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
     return age - 1;
@@ -40,7 +40,7 @@ const ListPeople = ({ ListPosts }: ListPeopleProps) => {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600 dark:text-gray-400 font-medium">Sort by:</label>
           <select className="border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-400 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
@@ -68,22 +68,22 @@ const ListPeople = ({ ListPosts }: ListPeopleProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
           {ListPosts.map((post: MissingPost, index: number) => {
             const age = calculateAge(post.dob);
-            
+
             const imageUrl = post.images.length > 0
-              ? (post.images.find(img => img.is_avatar)?.url || post.images[0].url)
-              : '/assets/images/missing_people/person1.png';
+              ? (post.images.find(img => img.is_avatar)?.url || post.images[0]?.url)
+              : null;
 
             return (
               <PersonCard
                 id={post.id_}
-                key={post.id_ || index} 
+                key={post.id_ || index}
                 name={post.name}
                 age={age}
                 gender={post.gender}
-                lastSeen={post.address || "Unknown"} 
+                lastSeen={post.address || "Unknown"}
                 dateMissing={post.missing_since}
                 description={post.description || "No description provided"}
-                imageUrl={imageUrl} 
+                imageUrl={imageUrl}
                 missing_since={post.missing_since}
               />
             );

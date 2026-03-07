@@ -17,14 +17,13 @@ const Dropdown = () => {
    },[dropdownOpen])
 
    const signOut = async () => {
-     const res = await fetch('/api/auth/logout', { method: 'POST' })
-     setUser({
-       name: '',
-       email: '',
-       role: '',
-       account_id: '',
-       phone: ''
-     })
+     // Clear the access token from localStorage
+     localStorage.removeItem('access_token')
+     
+     // Reset user state
+     setUser(null)
+     
+     // Redirect to login
      router.push('/login')
    }
   return (

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   try {
     console.log('CLIENT Token:', token) // Debugging line to check the token value
-    const flaskRes = await fetch(`${process.env.FLASK_URL}/auth/me`, {
+    const flaskRes = await fetch(`${process.env.API_URL}/auth/me`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

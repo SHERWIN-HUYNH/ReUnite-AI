@@ -1,19 +1,12 @@
-
 "use client";
 
 import { ReactNode } from "react";
-import { SessionProvider } from "next-auth/react";
-import { Session } from "next-auth";
 
 interface Props {
   children: ReactNode;
-  session?: Session | null;
 }
 
-export function Providers({ children, session }: Props) {
-  return (
-    <SessionProvider session={session}>
-      {children}
-    </SessionProvider>
-  );
+// Providers wrapper — mở rộng thêm provider ở đây nếu cần (theme, i18n, ...)
+export function Providers({ children }: Props) {
+  return <>{children}</>;
 }
